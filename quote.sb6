@@ -1,0 +1,186 @@
+# Quote Script for Stormbot TCL 6
+#
+# Usage:
+# Add quote: BOT quote add <quote>
+# Delete quote: BOT quote del <id>
+# Random quote: BOT quote
+# Stats: BOT quote stats
+# URL: BOT quote url
+# Search: BOT quote search/find <text>
+#
+# Change Log:
+# Please refer to http://github.com/demonicpagan/Stormbot-TCL-Quote-Module for changes made
+
+SB:command add QUOTE 1 -none
+sbd:set quote:author "Dustin Shea (demonicpagan@gmail.com)"
+
+# Global Quote settings (i.e url, file location, automatic db backup time)
+SB:register variable global QUOTE:*
+
+# Channel specific storage
+SB:register variable global QUOTE QUOTE:*
+
+
+proc SB:proc_quote {nick host handle chan arg} {
+	SB:setvariables
+
+	# Help information
+	if [string eq -nocase HELP $1] {
+		printh $nick "\[QUOTE\]:"
+		printh $nick "Store, retrieve, and rank quotes stored through the bot and view via the web."
+		printh $nick ""
+		printh $nick "\002Commands\002"
+		printh $nick "(/msg) $::botnick QUOTE ADD <quote> (Add a quote to the database, for multiline quotes use a single | with a space on each side.)"
+		printh $nick "(/msg) $::botnick QUOTE DEL <id> (Delete a quote from the database)"
+		printh $nick "(/msg) $::botnick QUOTE STATS (Displays the current number of quotes in the database)"
+		printh $nick "(/msg) $::botnick QUOTE SEARCH <text> (Search for quotes in the database)"
+		printh $nick "(/msg) $::botnick QUOTE URL (Displays where you can find these quotes on the web)"
+		printh $nick "(/msg) $::botnick QUOTE (Will display a random quote, if an ID given, will display that quote)"
+		printh $nick "(/msg) $::botnick QUOTE LAST (Displays the last quote submitted to the database)"
+		if [string eq -nocase ADMIN $u2] {
+			if [SB:checkaccess [sbd:get USERLEVEL:BOTOWNER] $handle] {
+				printh $nick "(/msg) $::botnick QUOTE <on|off> (Turn the script on or off for the particular channel)"
+				printh $nick "(/msg) $::botnick QUOTE SET URL <url> (Set the url of where the quotes can be found on the web)"
+				printh $nick "(/msg) $::botnick QUOTE SET DIR <dir location> (Defaults to: \037\002./scripts/quotedb\037\002)"
+				printh $nick "(/msg) $::botnick QUOTE SET WWWDIR <web file location> (Defaults to: \037\002~/public_html/\037\002)"
+				printh $nick "(/msg) $::botnick QUOTE PUBLISH (Update the web interface with the latest quotes)"
+				printh $nick "(/msg) $::botnick QUOTE BACKUP (Backup the quote database)"
+				printh $nick "(/msg) $::botnick QUOTE BACKUPTIME (Set the time for automatic backup - crontab format)"
+			}
+		}
+		return 0
+	}
+
+
+	switch -glob -- $l1 {
+		set {
+			switch -exact -- $l2 {
+				www - url {
+					if ![reqexp {http(s)?://.*} $3] {print $nick "URL must start with http(s)://" ; return 0}
+					sbd:set QUOTE:URL $3
+					SB:botdatafile write
+					print $nick "You have stored your base quote URL."
+					return 0
+				}
+
+				dir - directory {
+					if [isempty 3] {print $nick "Current database directory: [file normalize [sbdget QUOTE:DIRECTORY]]"; return 0}
+					set dir [file normalize $j3e]
+
+					if {[lsearch -exact [list NONE DEL CLEAR] $u3] > -1} {
+						sbd:set QUOTE:DIRECTORY ./scripts/quotedb
+						SB:botdatafile write
+						print $nick "Restoring default quote storage database directory: ./scripts/quotedb"
+						return 0
+					}
+
+					if ![file isdirectory $dir] {
+						if [file exists $dir] {printh $nick "That is a regular file that already exists."; return 0}
+						file mkdir $dir
+						print $nick "Directory doesn't already exist, creating it for you..."
+					}
+
+					sbd:set QUOTE:DIRECTORY $dir
+					SB:botdatafile write
+					print $nick "Current quote storage database directory is now: $dir"
+					return 0
+				}
+
+				webdir - wwwdir {
+					if [isempty 3] {print $nick "Current database directory: [file normalize [sbdget QUOTE:WWWDIRECTORY]]"; return 0}
+					set dir [file normalize $j3e]
+
+					if {[lsearch -exact [list NONE DEL CLEAR] $u3] > -1} {
+						sbd:set QUOTE:DIRECTORY ~/public_html/
+						SB:botdatafile write
+						print $nick "Restoring default quote storage database directory: ~/public_html/"
+						return 0
+					}
+
+					if ![file isdirectory $dir] {
+						if [file exists $dir] {printh $nick "That is a regular file that already exists."; return 0}
+						file mkdir $dir
+						print $nick "Directory doesn't already exist, creating it for you..."
+					}
+
+					sbd:set QUOTE:DIRECTORY $dir
+					SB:botdatafile write
+					print $nick "Current quote storage database directory is now: $dir"
+					return 0
+				}
+
+				bt - backuptime {
+					return 0
+				}
+			}
+			return 0
+		}
+
+		on {
+			sbd:set QUOTE QUOTE:$chan:OFFON 1
+			SB:botdatafile write
+			print $nick "The Quote database script is now ON for $chan"
+			return 0
+		}
+
+		off {
+			sbd:set QUOTE QUOTE:$chan:OFFON 0
+			SB:botdatafile write
+			print $nick "The Quote database script is now OFF for $chan"
+			return 0
+		}
+
+		+ - add {
+			return 0
+		}
+
+		"-" - del* {
+			return 0
+		}
+
+		find - search {
+			return 0
+		}
+
+		stats - statistics {
+			return 0
+		}
+
+		lst - last {
+			return 0
+		}
+
+		pub - publish {
+			return 0
+		}
+
+		bu - back - backup {
+			return 0
+		}
+
+		default {
+			return 0
+		}
+
+	}
+}
+
+proc quote:filewrite { {dir ""} }{
+	
+}
+
+proc quote:fileread {
+
+}
+
+proc quote:backup_db {min hour day month year} {
+
+}
+
+proc quote:check_defaults args {
+	if [sbd:isempty QUOTE:DIRECTORY] {sbd:set QUOTE:DIRECTORY ./scripts/quotedb}
+	if [sbd:isempty QUOTE:WWWDIRECTORY {sbd:set QUOTE:WWWDIRECTORY ~/public_html}
+	return 0
+}
+
+quote:check_defaults
