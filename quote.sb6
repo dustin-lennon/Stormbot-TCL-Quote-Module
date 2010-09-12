@@ -38,81 +38,11 @@ proc SB:proc_quote {nick host handle chan arg} {
 		printh $nick "(/msg) $::botnick QUOTE URL (Displays where you can find these quotes on the web)"
 		printh $nick "(/msg) $::botnick QUOTE (Will display a random quote, if an ID given, will display that quote)"
 		printh $nick "(/msg) $::botnick QUOTE LAST (Displays the last quote submitted to the database)"
-		if [string eq -nocase ADMIN $u2] {
-			if [SB:checkaccess [sbd:get USERLEVEL:BOTOWNER] $handle] {
-				printh $nick "(/msg) $::botnick QUOTE <on|off> (Turn the script on or off for the particular channel)"
-				printh $nick "(/msg) $::botnick QUOTE SET URL <url> (Set the url of where the quotes can be found on the web)"
-				printh $nick "(/msg) $::botnick QUOTE SET DIR <dir location> (Defaults to: \037\002./scripts/quotedb\037\002)"
-				printh $nick "(/msg) $::botnick QUOTE SET WEBDIR <web file location> (Defaults to: \037\002~/public_html/\037\002)"
-				printh $nick "(/msg) $::botnick QUOTE PUBLISH (Update the web interface with the latest quotes)"
-				printh $nick "(/msg) $::botnick QUOTE BACKUP (Backup the quote database)"
-				printh $nick "(/msg) $::botnick QUOTE BACKUPTIME (Set the time for automatic backup - crontab format)"
-			}
-		}
 		return 0
 	}
 
 
 	switch -glob -- $l1 {
-		set {
-			switch -exact -- $l2 {
-				www - url {
-					if ![regexp {^http(s)?://.*$} $3] {print $nick "URL must start with http(s)://" ; return 0}
-					sbd:set QUOTE:URL $3
-					SB:botdatafile write
-					print $nick "You have stored your base quote URL."
-					return 0
-				}
-
-				dir - directory {
-					if [isempty 3] {print $nick "Current database directory: [file normalize [sbd:lindex QUOTE 0]]"; return 0}
-					set dir [file normalize $j3e]
-
-					if {[lsearch -exact [list NONE DEL CLEAR] $u3] > -1} {
-						sbd:lset QUOTE 0 ./scripts/quotedb
-						SB:botdatafile write
-						print $nick "Restoring default quote storage database directory: ./scripts/quotedb"
-						return 0
-					}
-
-					if [string equ file [file type $dir]] {printh $nick "That is a regular file that already exists."; return 0}
-					file mkdir $dir
-					print $nick "Directory doesn't already exist, creating it for you..."
-
-					sbd:lset QUOTE 0 $dir
-					SB:botdatafile write
-					print $nick "Current quote storage database directory is now: $dir"
-					return 0
-				}
-
-				webdir - homedir {
-					if [isempty 3] {print $nick "Current database directory: [file normalize [sbd:lindex QUOTE 1]]"; return 0}
-					set dir [file normalize $j3e]
-
-					if {[lsearch -exact [list NONE DEL CLEAR] $u3] > -1} {
-						sbd:lset QUOTE 1 ~/public_html/
-						SB:botdatafile write
-						print $nick "Restoring default quote storage database directory: ~/public_html/"
-						return 0
-					}
-
-					if [string eq file [file type $dir]] {printh $nick "That is a regular file that already exists."; return 0}
-					file mkdir $dir
-					print $nick "Directory doesn't already exist, creating it for you..."
-
-					sbd:lset QUOTE 1 $dir
-					SB:botdatafile write
-					print $nick "Current quote storage database directory is now: $dir"
-					return 0
-				}
-
-				bt - time - backuptime {
-					return 0
-				}
-			}
-			return 0
-		}
-
 		off - on {
 			set true [istrue $l1]
 			# Need to put a set default for following line in above - how?
@@ -142,59 +72,9 @@ proc SB:proc_quote {nick host handle chan arg} {
 			return 0
 		}
 
-		pub - publish {
-			return 0
-		}
-
-		bu - back - backup {
-			return 0
-		}
-
 		default {
 			return 0
 		}
 
 	}
-}
-
-# Master Control Proc - Idea by Mai
-proc SB:quote_control { cmd { arg1 "" } { arg2 "" } { arg3 "" } } {
-	switch -exact -- [stl $cmd] {
-		read {
-			
-		}
-
-		write {
-			
-		}
-
-		save {
-		
-		}
-
-		backup {
-		
-		}
-
-		def - "default" - defaults {
-			# This is different from the next, how?
-		}
-
-		default {
-			# Complain about something
-		}
-	}
-	return 0
-}
-
-proc quote:filewrite { {dir ""} }{
-	
-}
-
-proc quote:fileread {
-
-}
-
-proc quote:backup_db {min hour day month year} {
-
 }
