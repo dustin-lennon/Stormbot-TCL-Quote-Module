@@ -16,6 +16,11 @@ You can always get the latest source from <http://github.com/demonicpagan/Stormb
 
 Changelog - Dates are in Epoch time
 -----------------------------------
+1284385721
+
+*	Fixed some code to mention how many quotes are in the database.
+*	Removed some code in the LAST command that was a copy/paste from STATISTICS and shouldn't have been there.
+
 1284385300
 
 *	In last commit, forgot a couple close braces that prevented the bead from loading.
@@ -27,7 +32,7 @@ Changelog - Dates are in Epoch time
 
 1284382243
 
-*	Added functionality to statistics and last commands.
+*	Added functionality to STATISTICS and LAST commands.
 
 1284379269
 
