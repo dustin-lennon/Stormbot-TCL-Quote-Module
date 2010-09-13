@@ -16,6 +16,22 @@ You can always get the latest source from <http://github.com/demonicpagan/Stormb
 
 Changelog - Dates are in Epoch time
 -----------------------------------
+1284379269
+
+*	Cleaned up text display if access level wasn't high enough (i.e. [QUOTE QUOTE] became [QUOTE OFF|ON] for turning the script on/off for a channel).
+
+TODO
+
+*	Fix how deleted quotes are displayed if they are multiline quotes.<br />
+[ 05:58:00 am | 241009.13 ]   [ ~Demonicpagan ] w qe add This is a | multiline test quote<br />
+[ 05:58:00 am | 241009.13 ]   [ @Worf ] [QUOTE ADD] Quote #2 has been added to the database!<br />
+[ 06:04:56 am | 241009.13 ]   [ ~Demonicpagan ] w qe - 2<br />
+[ 06:04:57 am | 241009.13 ]   [ @Worf ] [QUOTE DEL] Destroyed quote #2:<br />
+[ 06:04:58 am | 241009.13 ]   [ @Worf ] Originally added by Demonicpagan: Mon, 13 Sep 2010, 06:04:31 CDT [Stardate 64698.2] CY6932<br />
+[ 06:04:59 am | 241009.13 ]   [ @Worf ]  This is a<br />
+[ 06:05:01 am | 241009.13 ]   [ @Worf ]  This is a<br />
+[ 06:05:03 am | 241009.13 ]   [ @Worf ] [QUOTE DEL] 1 quote deleted.
+
 1284377139
 
 *	Fixed various errors in the quote delete code. Still a minor bug left in how the display of a quote is tried to be deleted in a channel it wasn't created
@@ -25,8 +41,8 @@ in.
 
 TODO
 
-*	Fix quote deletion return value if quote being deleted wasn't set in the channel in which it's being deleted.
-[ 06:18:38 am | 241009.13 ]   [ @Worf ] [QUOTE DEL] 1 quote deleted.
+*	Fix quote deletion return value if quote being deleted wasn't set in the channel in which it's being deleted.<br />
+[ 06:18:38 am | 241009.13 ]   [ @Worf ] [QUOTE DEL] 1 quote deleted.<br />
 [ 06:18:39 am | 241009.13 ]   [ @Worf ] [QUOTE DEL] You can read quotes from any channel, but can only DELETE quotes from which they were created in. Quote #4 is from #BotHouse.
 
 1284373573

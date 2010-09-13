@@ -39,11 +39,11 @@ proc SB:proc_quote {nick host handle chan arg} {
 
 	switch -glob -- $l1 {
 		off - on {
-			if ![SB:checkaccess 500 $handle $chan] {printh $nick "\[QUOTE ${u0}\] You must be the channel owner to change this setting."; return 0}
+			if ![SB:checkaccess 500 $handle $chan] {printh $nick "\[QUOTE OFF|ON\] You must be the channel owner to change this setting."; return 0}
 			set true [istrue $1]
 			tdb meta set QUOTE offon:$chan $true
 			SB:quote_control save
-			print $nick "\[QUOTE ${u0}\] Quote engine is now: [stu [offon $true]]"
+			print $nick "\[QUOTE OFF|ON\] Quote engine is now: [stu [offon $true]]"
 			return 0
 		}
 
@@ -69,7 +69,7 @@ proc SB:proc_quote {nick host handle chan arg} {
 		}
 
 		"-" - del* {
-			if ![SB:checkaccess 500 $handle $chan] {printh $nick "\[QUOTE ${u0}\] You must be the channel owner to change this setting."; return 0}
+			if ![SB:checkaccess 500 $handle $chan] {printh $nick "\[QUOTE DEL\] You must be the channel owner to delete a quote from the database."; return 0}
 			set offon [tdb meta get QUOTE offon:$chan]
 			if [isempty 2] {printh $nick "\[QUOTE DEL\] You're forgetting to put what quote(s) to delete!"; return 0}
 			if ![nozero $offon] {printh $nick "\[QUOTE DEL\] Quote deleting is currently turned off for $chan."; return 0}
