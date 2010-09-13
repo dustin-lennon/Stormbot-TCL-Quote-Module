@@ -5,7 +5,6 @@
 # Delete quote: BOT quote del <id>
 # Random quote: BOT quote
 # Stats: BOT quote stats
-# URL: BOT quote url
 # Search: BOT quote search/find <text>
 #
 # Change Log:
@@ -14,49 +13,94 @@
 SB:command add QUOTE 1 -none
 sbd:set quote:author "Dustin Shea (demonicpagan@gmail.com)"
 
-# Combined: Global Quote settings (i.e url, file location, auto db backup time)
-# and Channel specific storage
-SB:register variable global QUOTE QUOTE:*
-
-
 proc SB:proc_quote {nick host handle chan arg} {
 	SB:setvariables
 
-	# Set defaults
-	set quote [sbd:reset_defaults [sbd:set QUOTE [list ./scripts/quotedb ~/public_html]]]
+	# Create TDB Table
+	tdb table setup QUOTE [list id nick host quote chan rating timestamp]
+	tdb header set QUOTE cby $::botnick
+	tdb header set QUOTE mby $::botnick
 
 	# Help information
-	if [string eq -nocase HELP $1] {
+	if [string eq -nocase HELP $u1] {
 		printh $nick "\[QUOTE\]:"
-		printh $nick "Store, retrieve, and rank quotes stored through the bot and view via the web."
+		printh $nick "Store, retrieve, and rank quotes stored through the bot."
 		printh $nick ""
-		printh $nick "\002Commands\002"
-		printh $nick "(/msg) $::botnick QUOTE ADD <quote> (Add a quote to the database, for multiline quotes use a single | with a space on each side.)"
-		printh $nick "(/msg) $::botnick QUOTE DEL <id> (Delete a quote from the database)"
-		printh $nick "(/msg) $::botnick QUOTE STATS (Displays the current number of quotes in the database)"
-		printh $nick "(/msg) $::botnick QUOTE SEARCH <text> (Search for quotes in the database)"
-		printh $nick "(/msg) $::botnick QUOTE URL (Displays where you can find these quotes on the web)"
-		printh $nick "(/msg) $::botnick QUOTE (Will display a random quote, if an ID given, will display that quote)"
-		printh $nick "(/msg) $::botnick QUOTE LAST (Displays the last quote submitted to the database)"
+		printh $nick "Syntax: $::botnick QUOTE OFF | ON      (Activate the quote engine for channel)"
+		printh $nick "Syntax: $::botnick QUOTE ADD <quote>   (Add a quote to the database, for multiline quotes use a single | with a space on each side.)"
+		printh $nick "Syntax: $::botnick QUOTE DEL <id>      (Delete a quote from the database)"
+		printh $nick "Syntax: $::botnick QUOTE STATS         (Displays the current number of quotes in the database)"
+		printh $nick "Syntax: $::botnick QUOTE SEARCH <text> (Search for quotes in the database)"
+		printh $nick "Syntax: $::botnick QUOTE               (Will display a random quote, if an ID given, will display that quote)"
+		printh $nick "Syntax: $::botnick QUOTE LAST          (Displays the last quote submitted to the database)"
 		return 0
 	}
 
 
 	switch -glob -- $l1 {
 		off - on {
-			set true [istrue $l1]
-			# Need to put a set default for following line in above - how?
-			sbd:set QUOTE:${chan}:OFFON $true
-			SB:botdatafile write
-			print $nick "The Quote database script is now ON for $chan"
+			if ![SB:check_access 500 $handle $chan] {printh $nick "\[QUOTE ${u0}\] You must be the channel owner to change this setting."; return 0}
+			set true [istrue $1]
+			tdb meta set QUOTE offon:$chan $true
+			SB:quote_control save
+			print $nick "\[QUOTE ${u0}\] Quote engine is now: [stu [offon $true]]"
 			return 0
 		}
 
 		+ - add {
+			set offon [tdb meta get QUOTE offon:$chan]
+			if [isempty 2] {printh $nick "\[QUOTE ADD\] You're forgetting the quote!"; return 0}
+			if ![nozero $offon] {printh $nick "\[QUOTE ADD\] Quote adding is currently turned off for $chan."; retun 0}
+
+			# Start storing quotes
+			set record [tdb record create QUOTE]
+			tdb header set QUOTE mby $handle
+			tdb record set QUOTE id $record
+			tdb record set QUOTE nick $nick
+			tdb record set QUOTE host $nick!$host
+			tdb record set QUOTE quote $2e ; # DO NOT JOIN!
+			tdb record set QUOTE chan $chan
+			tdb record set QUOTE rating ""
+			tdb record set QUOTE timestamp [now]
+
+			SB:quote_control save
+			print $nick "\[QUOTE ADD\] Quote #[comma $record] has been added to the database!"
 			return 0
 		}
 
 		"-" - del* {
+			set offon [tdb meta get QUOTE offon:$chan]
+			if [isempty 2] {printh $nick "\[QUOTE DEL\] You're forgetting to put what quote(s) to delete!"; return 0}
+			if ![nozero $offon] {printh $nick "\[QUOTE DEL\] Quote deleting is currently turned off for $chan."; return 0}
+
+			# You can use SB:GET_COUNT to do a range of quotes,
+			# including "LAST #"
+
+			set list [SB:get_count $2e [tdb record last QUOTE]]
+			set ll [llength $list]
+			if [isempty list] {printh $nick "\[QUOTE DEL\] You didn't provide me with a quote number or range to delete."; return 0}
+
+			# Destroy in high-to-low order, or the #'s will target the
+			# wrong quotes !!!!!
+
+			foreach quote [lsort -integer -decreasing $list] {
+				set record [tdb record array QUOTE $2 data]
+				if ![string eq -nocase $data($chan) $chan] {printh $nick "\[QUOTE DEL\] You can read quotes from any channel, but can only DELETE quotes from which they were created in. Quote #[comma $record] is from ${chan}."; continue}
+				tdb record destroy QUOTE $2
+				tdb header set QUOTE mby $handle
+				SB:quote_control save
+
+				print $nick "\[QUOTE DEL\] Destroyed quote #[comma $record]:"
+				print $nick "Originally added by ${data(nick)}: [formatdate $data(timestamp) $handle]"
+
+				# Allow both styles of line breaks: Dustin's & Domino's
+				regsub -all -- { \| |\|\|} $data(text) \000 quote
+				foreach line [split $quote \000] {print $nick [space 5][join $quote]}
+				if {$ll > 1} {print $nick ""; # Separator}
+			}
+
+			# Since we have a terminal line break, let's output something
+			print $nick "\[QUOTE DEL\] [comma $ll] [plural quote $ll] deleted."
 			return 0
 		}
 
@@ -77,4 +121,22 @@ proc SB:proc_quote {nick host handle chan arg} {
 		}
 
 	}
+}
+
+proc SB:quote_control {cmd { target "" } { 1 "" } { 2 "" } { 3 "" } } {
+	switch -exact -- [stl $cmd] {
+		save {
+			tbd save $::botnick-quotes.tdb QUOTES:*
+			return 0
+		}
+
+		load {
+			set exists [file exists $::botnick-quotes.tdb]
+			if $exists { tdb load $::botnick-quotes.tdb }
+			return $exists
+		}
+
+		default { error "\[SB:QUOTE_CONTROL\] Unknown Command: [stu $cmd]" }
+	}
+	error ?
 }
