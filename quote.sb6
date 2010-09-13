@@ -10,7 +10,7 @@
 # Change Log:
 # Please refer to http://github.com/demonicpagan/Stormbot-TCL-Quote-Module for changes made
 
-SB:command add QUOTE 1 -none
+SB:command add QUOTE 1 -none QE
 sbd:set quote:author "Dustin Shea (demonicpagan@gmail.com)"
 
 proc SB:proc_quote {nick host handle chan arg} {
@@ -39,7 +39,7 @@ proc SB:proc_quote {nick host handle chan arg} {
 
 	switch -glob -- $l1 {
 		off - on {
-			if ![SB:check_access 500 $handle $chan] {printh $nick "\[QUOTE ${u0}\] You must be the channel owner to change this setting."; return 0}
+			if ![SB:checkaccess 500 $handle $chan] {printh $nick "\[QUOTE ${u0}\] You must be the channel owner to change this setting."; return 0}
 			set true [istrue $1]
 			tdb meta set QUOTE offon:$chan $true
 			SB:quote_control save
@@ -50,18 +50,18 @@ proc SB:proc_quote {nick host handle chan arg} {
 		+ - add {
 			set offon [tdb meta get QUOTE offon:$chan]
 			if [isempty 2] {printh $nick "\[QUOTE ADD\] You're forgetting the quote!"; return 0}
-			if ![nozero $offon] {printh $nick "\[QUOTE ADD\] Quote adding is currently turned off for $chan."; retun 0}
+			if ![nozero $offon] {printh $nick "\[QUOTE ADD\] Quote adding is currently turned off for $chan."; return 0}
 
 			# Start storing quotes
 			set record [tdb record create QUOTE]
 			tdb header set QUOTE mby $handle
-			tdb record set QUOTE id $record
-			tdb record set QUOTE nick $nick
-			tdb record set QUOTE host $nick!$host
-			tdb record set QUOTE quote $2e ; # DO NOT JOIN!
-			tdb record set QUOTE chan $chan
-			tdb record set QUOTE rating ""
-			tdb record set QUOTE timestamp [now]
+			tdb record set QUOTE $record id $record
+			tdb record set QUOTE $record nick $nick
+			tdb record set QUOTE $record host $nick!$host
+			tdb record set QUOTE $record quote $2e ; # DO NOT JOIN!
+			tdb record set QUOTE $record chan $chan
+			tdb record set QUOTE $record rating ""
+			tdb record set QUOTE $record timestamp [now]
 
 			SB:quote_control save
 			print $nick "\[QUOTE ADD\] Quote #[comma $record] has been added to the database!"
@@ -69,6 +69,7 @@ proc SB:proc_quote {nick host handle chan arg} {
 		}
 
 		"-" - del* {
+			if ![SB:checkaccess 500 $handle $chan] {printh $nick "\[QUOTE ${u0}\] You must be the channel owner to change this setting."; return 0}
 			set offon [tdb meta get QUOTE offon:$chan]
 			if [isempty 2] {printh $nick "\[QUOTE DEL\] You're forgetting to put what quote(s) to delete!"; return 0}
 			if ![nozero $offon] {printh $nick "\[QUOTE DEL\] Quote deleting is currently turned off for $chan."; return 0}
@@ -85,16 +86,17 @@ proc SB:proc_quote {nick host handle chan arg} {
 
 			foreach quote [lsort -integer -decreasing $list] {
 				set record [tdb record array QUOTE $2 data]
-				if ![string eq -nocase $data($chan) $chan] {printh $nick "\[QUOTE DEL\] You can read quotes from any channel, but can only DELETE quotes from which they were created in. Quote #[comma $record] is from ${chan}."; continue}
+				if ![tdb record exists QUOTE $2] {printh $nick "\[QUOTE DEL\] No such quote exists in my database."; return 0}
+				if ![string eq -nocase $data(chan) $chan] {printh $nick "\[QUOTE DEL\] You can read quotes from any channel, but can only DELETE quotes from which they were created in. Quote #[comma $data(id)] is from $data(chan)."; continue}
 				tdb record destroy QUOTE $2
 				tdb header set QUOTE mby $handle
 				SB:quote_control save
 
-				print $nick "\[QUOTE DEL\] Destroyed quote #[comma $record]:"
+				print $nick "\[QUOTE DEL\] Destroyed quote #[comma $data(id)]:"
 				print $nick "Originally added by ${data(nick)}: [formatdate $data(timestamp) $handle]"
 
 				# Allow both styles of line breaks: Dustin's & Domino's
-				regsub -all -- { \| |\|\|} $data(text) \000 quote
+				regsub -all -- { \| |\|\|} $data(quote) \000 quote
 				foreach line [split $quote \000] {print $nick [space 5][join $quote]}
 				if {$ll > 1} {print $nick ""; # Separator}
 			}
@@ -126,7 +128,7 @@ proc SB:proc_quote {nick host handle chan arg} {
 proc SB:quote_control {cmd { target "" } { 1 "" } { 2 "" } { 3 "" } } {
 	switch -exact -- [stl $cmd] {
 		save {
-			tbd save $::botnick-quotes.tdb QUOTES:*
+			tdb save $::botnick-quotes.tdb QUOTES:*
 			return 0
 		}
 
