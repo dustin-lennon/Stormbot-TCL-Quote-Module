@@ -16,6 +16,10 @@ You can always get the latest source from <http://github.com/demonicpagan/Stormb
 
 Changelog - Dates are in Epoch time
 -----------------------------------
+1284385300
+
+*	In last commit, forgot a couple close braces that prevented the bead from loading.
+
 1284385018
 
 *	Fixed the multiline display when deleting a quote that is multilined.
