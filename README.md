@@ -16,6 +16,10 @@ You can always get the latest source from <http://github.com/demonicpagan/Stormb
 
 Changelog - Dates are in Epoch time
 -----------------------------------
+1284393748
+
+*	Started work on rating code. Not working as expected at the moment. Will work on later to fix.
+
 1284385721
 
 *	Fixed some code to mention how many quotes are in the database.

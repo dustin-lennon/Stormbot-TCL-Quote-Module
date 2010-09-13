@@ -26,13 +26,14 @@ proc SB:proc_quote {nick host handle chan arg} {
 		printh $nick "\[QUOTE\]:"
 		printh $nick "Store, retrieve, and rank quotes stored through the bot."
 		printh $nick ""
-		printh $nick "Syntax: $::botnick QUOTE OFF | ON      (Activate the quote engine for channel)"
-		printh $nick "Syntax: $::botnick QUOTE ADD <quote>   (Add a quote to the database, for multiline quotes use a single | with a space on each side.)"
-		printh $nick "Syntax: $::botnick QUOTE DEL <id>      (Delete a quote from the database)"
-		printh $nick "Syntax: $::botnick QUOTE STATS         (Displays the current number of quotes in the database)"
-		printh $nick "Syntax: $::botnick QUOTE SEARCH <text> (Search for quotes in the database)"
-		printh $nick "Syntax: $::botnick QUOTE               (Will display a random quote, if an ID given, will display that quote)"
-		printh $nick "Syntax: $::botnick QUOTE LAST          (Displays the last quote submitted to the database)"
+		printh $nick "Syntax: $::botnick QUOTE OFF | ON              (Activate the quote engine for channel)"
+		printh $nick "Syntax: $::botnick QUOTE ADD <quote>           (Add a quote to the database, for multiline quotes use a single | with a space on each side.)"
+		printh $nick "Syntax: $::botnick QUOTE DEL <id>              (Delete a quote from the database)"
+		printh $nick "Syntax: $::botnick QUOTE STATS                 (Displays the current number of quotes in the database)"
+		printh $nick "Syntax: $::botnick QUOTE SEARCH <text>         (Search for quotes in the database)"
+		printh $nick "Syntax: $::botnick QUOTE                       (Will display a random quote, if an ID given, will display that quote)"
+		printh $nick "Syntax: $::botnick QUOTE LAST                  (Displays the last quote submitted to the database)"
+		printh $nick "Syntax: $::botnick QUOTE RATE <id> <+|-|++|--> (Rate your quotes)"
 		return 0
 	}
 
@@ -98,12 +99,34 @@ proc SB:proc_quote {nick host handle chan arg} {
 				# Allow both styles of line breaks: Dustin's & Domino's
 				regsub -all -- { \| |\|\|} $data(quote) \000 quote
 				foreach line [split $quote \000] {print $nick [space 5][join $line]}
-				if {$ll > 1} {print $nick ""; # Separator}
+				if {$ll > 1} {print $nick ""; # Separator }
 			}
 
 			# Since we have a terminal line break, let's output something
 			print $nick "\[QUOTE DEL\] [comma $ll] [plural quote $ll] deleted."
 			return 0
+		}
+
+		rate - rank {
+			set offon [tdb meta get QUOTE offon:$chan]
+			if ![nozero $offon] {printh $nick "\[QUOTE RATE\] Quote rating is currently turned off for $chan."; return 0}
+			if [isempty 2] {printh $nick "\[QUOTE RATE\] You're forgetting to put what quote to rate!"; return 0}
+
+			set record [tdb record array QUOTE $2 data]
+			if ![tdb record exists QUOTE $2] {printh $nick "\[QUOTE RATE\] No such quote exists in my database."; return 0}
+			if ![string eq -nocase $data(chan) $chan] {printh $nick "\[QUOTE RATE\] You can read quotes from any channel, but can only RATE quotes from which they were created in. Quote #[comma $data(id)] is from $data(chan)."; return 0}
+
+			tdb header set QUOTE mby $handle
+
+			set rating 0
+			if {$3 == "++"} {set rating "2"; tdb record set QUOTE $2 rating $rating}
+			if {$3 == "+"} {set rating "1"; tdb record set QUOTE $2 rating $rating}
+			if {$3 == "-"} {set rating "-1"; tdb record set QUOTE $2 rating $rating}
+			if {$3 == "--"} {set rating "-2"; tdb record set QUOTE $2 rating $rating}
+
+			SB:quote_control save
+
+			print $nick "\[QUOTE RATE\] Quote #[comma $data(id)] rated: $data(rating)"
 		}
 
 		find - search {
@@ -115,7 +138,7 @@ proc SB:proc_quote {nick host handle chan arg} {
 			set last [tdb record last QUOTE]
 			set info [tdb record array QUOTE $last data]
 
-			print $nick "There are currently $total quotes in the database."
+			print $nick "There are currently $total quotes in the database making $::botnick-quotes.tdb use [format %.2f [expr [file size $::botnick-quotes.tdb] / 1024.0]] KB of disk space."
 			print $nick "The last quote was added on [formatdate $data(timestamp) $handle] by $data(nick) in $data(chan)."
 
 			regsub -all -- { \| |\|\|} $data(quote) \000 quote
