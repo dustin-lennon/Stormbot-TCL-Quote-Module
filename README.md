@@ -16,6 +16,11 @@ You can always get the latest source from <http://github.com/demonicpagan/Stormb
 
 Changelog - Dates are in Epoch time
 -----------------------------------
+1284385018
+
+*	Fixed the multiline display when deleting a quote that is multilined.
+*	Added multiline display functionality when showing last quote placed in the database if stored as a multiline quote.
+
 1284382243
 
 *	Added functionality to statistics and last commands.
@@ -24,7 +29,7 @@ Changelog - Dates are in Epoch time
 
 *	Cleaned up text display if access level wasn't high enough (i.e. [QUOTE QUOTE] became [QUOTE OFF|ON] for turning the script on/off for a channel).
 
-TODO
+TODO - *DONE*
 
 *	Fix how deleted quotes are displayed if they are multiline quotes.<br />
 [ 05:58:00 am | 241009.13 ]   [ ~Demonicpagan ] w qe add This is a | multiline test quote<br />

@@ -97,7 +97,7 @@ proc SB:proc_quote {nick host handle chan arg} {
 
 				# Allow both styles of line breaks: Dustin's & Domino's
 				regsub -all -- { \| |\|\|} $data(quote) \000 quote
-				foreach line [split $quote \000] {print $nick [space 5][join $quote]}
+				foreach line [split $quote \000] {print $nick [space 5][join $line]}
 				if {$ll > 1} {print $nick ""; # Separator}
 			}
 
@@ -117,7 +117,10 @@ proc SB:proc_quote {nick host handle chan arg} {
 
 			print $nick "There are currently $total quotes in the database."
 			print $nick "The last quote was added on [formatdate $data(timestamp) $handle] by $data(nick) in $data(chan)."
-			print $nick "Quote #[comma $data(id)]: $data(quote)"
+
+			regsub -all -- { \| |\|\|} $data(quote) \000 quote
+			foreach line [split $quote \000] {print $nick "Quote #[comma $data(id)]: [join $line]"
+
 			if ![isempty data(rating)] {print $nick "This quote has a rating of $data(rating)."} else {print $nick "This quote hasn't been rated yet."; return 0}
 			return 0
 		}
@@ -128,7 +131,10 @@ proc SB:proc_quote {nick host handle chan arg} {
 
 			print $nick "There are currently $total quotes in the database."
 			print $nick "The last quote was added on [formatdate $data(timestamp) $handle] by $data(nick) in $data(chan)."
-			print $nick "Quote #[comma $data(id)]: $data(quote)"
+
+			regsub -all -- { \| |\|\|} $data(quote) \000 quote
+			foreach line [split $quote \000] {print $nick "Quote #[comma $data(id)]: [join $line]"
+
 			if ![isempty data(rating)] {print $nick "This quote has a rating of $data(rating)."} else {print $nick "This quote hasn't been rated yet."; return 0}
 			return 0
 		}
