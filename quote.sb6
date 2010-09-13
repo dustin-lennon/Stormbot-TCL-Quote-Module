@@ -111,10 +111,25 @@ proc SB:proc_quote {nick host handle chan arg} {
 		}
 
 		stats - statistics {
+			set total [tdb record names QUOTE]
+			set last [tdb record last QUOTE]
+			set info [tdb record array QUOTE $last data]
+
+			print $nick "There are currently $total quotes in the database."
+			print $nick "The last quote was added on [formatdate $data(timestamp) $handle] by $data(nick) in $data(chan)."
+			print $nick "Quote #[comma $data(id)]: $data(quote)"
+			if ![isempty data(rating)] {print $nick "This quote has a rating of $data(rating)."} else {print $nick "This quote hasn't been rated yet."; return 0}
 			return 0
 		}
 
 		lst - last {
+			set last [tdb record last QUOTE]
+			set info [tdb record array QUOTE $last data]
+
+			print $nick "There are currently $total quotes in the database."
+			print $nick "The last quote was added on [formatdate $data(timestamp) $handle] by $data(nick) in $data(chan)."
+			print $nick "Quote #[comma $data(id)]: $data(quote)"
+			if ![isempty data(rating)] {print $nick "This quote has a rating of $data(rating)."} else {print $nick "This quote hasn't been rated yet."; return 0}
 			return 0
 		}
 

@@ -16,6 +16,10 @@ You can always get the latest source from <http://github.com/demonicpagan/Stormb
 
 Changelog - Dates are in Epoch time
 -----------------------------------
+1284382243
+
+*	Added functionality to statistics and last commands.
+
 1284379269
 
 *	Cleaned up text display if access level wasn't high enough (i.e. [QUOTE QUOTE] became [QUOTE OFF|ON] for turning the script on/off for a channel).
