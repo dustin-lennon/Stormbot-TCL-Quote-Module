@@ -21,24 +21,22 @@ proc SB:proc_quote {nick host handle chan arg} {
 	tdb header set QUOTE cby $::botnick
 	tdb header set QUOTE mby $::botnick
 
-	# Help information
-	if [string eq -nocase HELP $u1] {
-		printh $nick "\[QUOTE\]:"
-		printh $nick "Store, retrieve, and rank quotes stored through the bot."
-		printh $nick ""
-		printh $nick "Syntax: $::botnick QUOTE OFF | ON              (Activate the quote engine for channel)"
-		printh $nick "Syntax: $::botnick QUOTE ADD <quote>           (Add a quote to the database, for multiline quotes use a single | with a space on each side.)"
-		printh $nick "Syntax: $::botnick QUOTE DEL <id>              (Delete a quote from the database)"
-		printh $nick "Syntax: $::botnick QUOTE STATS                 (Displays the current number of quotes in the database)"
-		printh $nick "Syntax: $::botnick QUOTE SEARCH <text>         (Search for quotes in the database)"
-		printh $nick "Syntax: $::botnick QUOTE                       (Will display a random quote, if an ID given, will display that quote)"
-		printh $nick "Syntax: $::botnick QUOTE LAST                  (Displays the last quote submitted to the database)"
-		printh $nick "Syntax: $::botnick QUOTE RATE <id> <+|-|++|--> (Rate your quotes)"
-		return 0
-	}
-
-
 	switch -glob -- $l1 {
+		help {
+			printh $nick "\[QUOTE\]:"
+			printh $nick "Store, retrieve, and rank quotes stored through the bot."
+			printh $nick ""
+			printh $nick "Syntax: $::botnick QUOTE OFF | ON              (Activate the quote engine for channel)"
+			printh $nick "Syntax: $::botnick QUOTE ADD <quote>           (Add a quote to the database, for multiline quotes use a single | with a space on each side.)"
+			printh $nick "Syntax: $::botnick QUOTE DEL <id>              (Delete a quote from the database)"
+			printh $nick "Syntax: $::botnick QUOTE STATS                 (Displays the current number of quotes in the database)"
+			printh $nick "Syntax: $::botnick QUOTE SEARCH <text>         (Search for quotes in the database)"
+			printh $nick "Syntax: $::botnick QUOTE                       (Will display a random quote, if an ID given, will display that quote)"
+			printh $nick "Syntax: $::botnick QUOTE LAST                  (Displays the last quote submitted to the database)"
+			printh $nick "Syntax: $::botnick QUOTE RATE <id> <+|-|++|--> (Rate your quotes)"
+			return 0
+		}
+
 		off - on {
 			if ![SB:checkaccess 500 $handle $chan] {printh $nick "\[QUOTE OFF|ON\] You must be the channel owner to change this setting."; return 0}
 			set true [istrue $1]
@@ -112,7 +110,7 @@ proc SB:proc_quote {nick host handle chan arg} {
 			if ![nozero $offon] {printh $nick "\[QUOTE RATE\] Quote rating is currently turned off for $chan."; return 0}
 			if [isempty 2] {printh $nick "\[QUOTE RATE\] You're forgetting to put what quote to rate!"; return 0}
 
-			set record [tdb record array QUOTE $2 data]
+			tdb record array QUOTE $2 data
 			if ![tdb record exists QUOTE $2] {printh $nick "\[QUOTE RATE\] No such quote exists in my database."; return 0}
 			if ![string eq -nocase $data(chan) $chan] {printh $nick "\[QUOTE RATE\] You can read quotes from any channel, but can only RATE quotes from which they were created in. Quote #[comma $data(id)] is from $data(chan)."; return 0}
 
