@@ -16,6 +16,14 @@ You can always get the latest source from <http://github.com/demonicpagan/Stormb
 
 Changelog - Dates are in Epoch time
 -----------------------------------
+1284617586
+
+*	Implemented rating system for quotes. Use 1 to 10 + or - signs to rate. All ratings are averaged for the particular quote.
+*	Implementing quote search system. Search quotes by user name/handle or quote text. Working on limiting to displaying
+only 10 in channel, but after display, list quote numbers for quotes matched in search. Having some difficulties with loop
+lagging the bot out.
+*	Changed $::botnick to ${::botnick} in SB:quote_control and in statistics due to the fact that it is a global variable.
+
 1284435346
 
 *	Moved help into the switch

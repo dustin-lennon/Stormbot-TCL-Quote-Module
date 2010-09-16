@@ -17,7 +17,7 @@ proc SB:proc_quote {nick host handle chan arg} {
 	SB:setvariables
 
 	# Create TDB Table
-	tdb table setup QUOTE [list id nick host quote chan rating timestamp]
+	tdb table setup QUOTE [list id nick host handle quote chan rating avrate timestamp]
 	tdb header set QUOTE cby $::botnick
 	tdb header set QUOTE mby $::botnick
 
@@ -26,14 +26,15 @@ proc SB:proc_quote {nick host handle chan arg} {
 			printh $nick "\[QUOTE\]:"
 			printh $nick "Store, retrieve, and rank quotes stored through the bot."
 			printh $nick ""
-			printh $nick "Syntax: $::botnick QUOTE OFF | ON              (Activate the quote engine for channel)"
-			printh $nick "Syntax: $::botnick QUOTE ADD <quote>           (Add a quote to the database, for multiline quotes use a single | with a space on each side.)"
-			printh $nick "Syntax: $::botnick QUOTE DEL <id>              (Delete a quote from the database)"
-			printh $nick "Syntax: $::botnick QUOTE STATS                 (Displays the current number of quotes in the database)"
-			printh $nick "Syntax: $::botnick QUOTE SEARCH <text>         (Search for quotes in the database)"
-			printh $nick "Syntax: $::botnick QUOTE                       (Will display a random quote, if an ID given, will display that quote)"
-			printh $nick "Syntax: $::botnick QUOTE LAST                  (Displays the last quote submitted to the database)"
-			printh $nick "Syntax: $::botnick QUOTE RATE <id> <+|-|++|--> (Rate your quotes)"
+			printh $nick "Syntax: $::botnick QUOTE OFF | ON                    (Activate the quote engine for channel)"
+			printh $nick "Syntax: $::botnick QUOTE ADD <quote>                 (Add a quote to the database, for multiline quotes use a single | with a space on each side.)"
+			printh $nick "Syntax: $::botnick QUOTE DEL <id>                    (Delete a quote from the database)"
+			printh $nick "Syntax: $::botnick QUOTE STATS                       (Displays the current number of quotes in the database)"
+			printh $nick "Syntax: $::botnick QUOTE SEARCH <user | text>        (Search for quotes in the database)"
+			printh $nick "Syntax: $::botnick QUOTE                             (Will display a random quote, if an ID given, will display that quote)"
+			printh $nick "Syntax: $::botnick QUOTE LAST                        (Displays the last quote submitted to the database)"
+			printh $nick "Syntax: $::botnick QUOTE RATE <id> <+ | - | ++ | --> (Rate your quotes, use 1-10 + or -)"
+			printh $nick "Syntax: $::botnick QUOTE LIST                        (Display the last 5 quotes stored to the database)"
 			return 0
 		}
 
@@ -57,9 +58,11 @@ proc SB:proc_quote {nick host handle chan arg} {
 			tdb record set QUOTE $record id $record
 			tdb record set QUOTE $record nick $nick
 			tdb record set QUOTE $record host $nick!$host
+			tdb record set QUOTE $record handle $handle
 			tdb record set QUOTE $record quote $2e ; # DO NOT JOIN!
 			tdb record set QUOTE $record chan $chan
 			tdb record set QUOTE $record rating ""
+			tdb record set QUOTE $record avrate ""
 			tdb record set QUOTE $record timestamp [now]
 
 			SB:quote_control save
@@ -110,24 +113,97 @@ proc SB:proc_quote {nick host handle chan arg} {
 			if ![nozero $offon] {printh $nick "\[QUOTE RATE\] Quote rating is currently turned off for $chan."; return 0}
 			if [isempty 2] {printh $nick "\[QUOTE RATE\] You're forgetting to put what quote to rate!"; return 0}
 
-			tdb record array QUOTE $2 data
 			if ![tdb record exists QUOTE $2] {printh $nick "\[QUOTE RATE\] No such quote exists in my database."; return 0}
+			tdb record array QUOTE $2 data
 			if ![string eq -nocase $data(chan) $chan] {printh $nick "\[QUOTE RATE\] You can read quotes from any channel, but can only RATE quotes from which they were created in. Quote #[comma $data(id)] is from $data(chan)."; return 0}
 
 			tdb header set QUOTE mby $handle
 
-			set rating 0
-			if {$3 == "++"} {set rating "2"; tdb record set QUOTE $2 rating $rating}
-			if {$3 == "+"} {set rating "1"; tdb record set QUOTE $2 rating $rating}
-			if {$3 == "-"} {set rating "-1"; tdb record set QUOTE $2 rating $rating}
-			if {$3 == "--"} {set rating "-2"; tdb record set QUOTE $2 rating $rating}
+			#!# Perhaps you should store all entries given,
+			#!# then you can give an "average rating" (just pull the
+			#!# data for rating, LAPPEND the new rating, re-store it).
+			#!# Calculation: [fixmath ( [join $rating +] ) / [llength $rating]] (:
 
+			zero rating
+			if [regexp -- {^\++$} $3] { 
+				set rating [regexp -all -- {\+} $3]
+			} elseif [regexp -- {^\-+$} $3] {
+				set rating -[regexp -all -- {\-} $3]
+			} else {
+				printh $nick "\[QUOTE RATE\] Illegal rating marker, use + or - to rate."
+				return 0
+			}
+
+			if {($rating < -10) || ($rating > 10)} {printh $nick "\[QUOTE RATE\] Let's not go nuts here, okay..."; return 0}
+
+			set rate [lappend data(rating) $rating]
+			set avrate [fixmath ( [join $rate +] ) / [llength $rate]]
+
+			tdb record set QUOTE $2 rating $rate
+			tdb record set QUOTE $2 avrate $avrate
 			SB:quote_control save
 
-			print $nick "\[QUOTE RATE\] Quote #[comma $data(id)] rated: $data(rating)"
+			print $nick "\[QUOTE RATE\] Quote #[comma $data(id)] rated: $rating"
 		}
 
 		find - search {
+			switch -exact -- $l2 {
+				user {
+					if [isempty 3] {printh $nick "\[QUOTE SEARCH\] I need to know what user to look up."; return 0}
+					whois null user $dccnick $j3 $chan
+					set records [tdb select chan,handle from QUOTE ${chan},$user]
+					set ll [llength $records]
+
+					while {$ll < 10} {
+						foreach record $records {
+							tdb record array QUOTE $record quote
+							one header
+							regsub -all -- { \| |\|\|} $quote(quote) \000 quote2
+
+							foreach line [split $quote2 \000] {
+								if ![isempty quote(rating)] {
+									print $nick "[lindex [list [space 5] "Quote #[comma $quote(id)] (Rating: $quote(avrate)):"] $header] [join $line]"; zero header
+								} else {
+									print $nick "[lindex [list [space 5] "Quote #[comma $quote(id)] (Rating: 0):"] $header] [join $line]"; zero header
+								}
+							}
+						}
+					}
+
+					print $nick "\[QUOTE SEARCH\] [comma $ll] [plural quote $ll] matched. ($records)"
+					return 0
+				}
+
+				text {
+					if [isempty 3] {printh $nick "\[QUOTE SEARCH\] I need to know what text to search for."; return 0}
+					set records [tdb select chan,quote from QUOTE ${chan},$j3e]
+					set ll [llength $records]
+
+					while {$ll < 10} {
+						foreach record $records {
+							tdb record array QUOTE $record quote
+							one header
+							regsub -all -- { \| |\|\|} $quote(quote) \000 quote2
+
+							foreach line [split $quote2 \000] {
+								if ![isempty quote(rating)] {
+									print $nick "[lindex [list [space 5] "Quote #[comma $quote(id)] (Rating: $quote(avrate)):"] $header] [join $line]"; zero header
+								} else {
+									print $nick "[lindex [list [space 5] "Quote #[comma $quote(id)] (Rating: 0):"] $header] [join $line]"; zero header
+								}
+							}
+						}
+					}
+
+					print $nick "\[QUOTE SEARCH\] [comma $ll] [plural quote $ll] matched. ($records)"
+					return 0
+				}
+
+				default {
+					printh $nick "\[QUOTE SEARCH\] Your options are: $u0 $u1 <USER | TEXT>"
+					return 0
+				}
+			}
 			return 0
 		}
 
@@ -136,26 +212,38 @@ proc SB:proc_quote {nick host handle chan arg} {
 			set last [tdb record last QUOTE]
 			set info [tdb record array QUOTE $last data]
 
-			print $nick "There are currently $total quotes in the database making $::botnick-quotes.tdb use [format %.2f [expr [file size $::botnick-quotes.tdb] / 1024.0]] KB of disk space."
+			print $nick "There are currently $total quotes in the database making ${::botnick}-quotes.tdb use [format %.2f [expr [file size $::botnick-quotes.tdb] / 1024.0]] KB of disk space."
 			print $nick "The last quote was added on [formatdate $data(timestamp) $handle] by $data(nick) in $data(chan)."
 
 			regsub -all -- { \| |\|\|} $data(quote) \000 quote
-			foreach line [split $quote \000] {print $nick "Quote #[comma $data(id)]: [join $line]"}
+			one header
+			foreach line [split $quote \000] {
+				if ![isempty data(rating)] {
+					print $nick "[lindex [list [space 5] "Quote #[comma $data(id)] (Rating: $data(avrate)):"] $header] [join $line]"; zero header
+				} else {
+					print $nick "[lindex [list [space 5] "Quote #[comma $data(id)] (Rating: 0):"] $header] [join $line]"; zero header
+				}
+			}
 
-			if ![isempty data(rating)] {print $nick "This quote has a rating of $data(rating)."} else {print $nick "This quote hasn't been rated yet."; return 0}
 			return 0
 		}
 
 		lst - last {
 			set last [tdb record last QUOTE]
-			set info [tdb record array QUOTE $last data]
+			tdb record array QUOTE $last data
 
 			print $nick "The last quote was added on [formatdate $data(timestamp) $handle] by $data(nick) in $data(chan)."
 
 			regsub -all -- { \| |\|\|} $data(quote) \000 quote
-			foreach line [split $quote \000] {print $nick "Quote #[comma $data(id)]: [join $line]"}
+			one header
+			foreach line [split $quote \000] {
+				if ![isempty data(rating)] {
+					print $nick "[lindex [list [space 5] "Quote #[comma $data(id)] (Rating: $data(avrate)):"] $header] [join $line]"; zero header
+				} else {
+					print $nick "[lindex [list [space 5] "Quote #[comma $data(id)] (Rating: 0):"] $header] [join $line]"; zero header
+				}
+			}
 
-			if ![isempty data(rating)] {print $nick "This quote has a rating of $data(rating)."} else {print $nick "This quote hasn't been rated yet."; return 0}
 			return 0
 		}
 
@@ -169,13 +257,13 @@ proc SB:proc_quote {nick host handle chan arg} {
 proc SB:quote_control {cmd { target "" } { 1 "" } { 2 "" } { 3 "" } } {
 	switch -exact -- [stl $cmd] {
 		save {
-			tdb save $::botnick-quotes.tdb QUOTES:*
+			tdb save ${::botnick}-quotes.tdb QUOTES
 			return 0
 		}
 
 		load {
-			set exists [file exists $::botnick-quotes.tdb]
-			if $exists { tdb load $::botnick-quotes.tdb }
+			set exists [file exists ${::botnick}-quotes.tdb]
+			if $exists { tdb load ${::botnick}-quotes.tdb }
 			return $exists
 		}
 
